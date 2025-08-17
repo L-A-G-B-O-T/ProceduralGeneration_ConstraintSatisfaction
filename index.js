@@ -115,6 +115,8 @@ const ctx = canvas.getContext("2d");
     graph.connectNodes(enter, middle);
     graph.connectNodes(exit, middle);
     graph.sizeCap = 40; //not a hard cap; just signals when the graph is big enough
+    graph.minBound = new Vector(0, 0);
+    graph.maxBound = new Vector(canvas.width, canvas.height);
     graph.runRule = function(node, index){
         if (graph.size() > graph.sizeCap) return true;
         if (node.value != "enter" && node.value != "exit"){
@@ -173,7 +175,6 @@ const ctx = canvas.getContext("2d");
         return false;
     }
     graph.spaceNode = function(node){
-        if (node.value == "enter" || node.value == "exit") return;
         const acc = new Vector(0, 0);
         let count = 0;
         for (let ni = 0; ni < graph.size(); ni++){
@@ -187,6 +188,9 @@ const ctx = canvas.getContext("2d");
         }
         acc.divScalarSelf(count);
         node.pos.addSelf(acc);
+        node.pos.clampSelf(graph.minBound, graph.maxBound);
+        if (node.value == "enter") node.pos.set(0);
+        if (node.value == "exit") node.pos.set(950)
     }
     graph.spaceOut = function(){
         for (let i = 0; i < graph.sizeCap*5; i++){
