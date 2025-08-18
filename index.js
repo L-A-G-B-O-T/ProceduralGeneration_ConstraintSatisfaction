@@ -107,6 +107,11 @@ const ctx = canvas.getContext("2d");
         return successful;
     }
 } */
+
+function randint(x, y){
+    return Math.floor(Math.random() * (y - x) + x);
+}
+
 {//capillary bed generation 2.0
     var graph = new GR_Graph();
     const enter = graph.addNode(new Vector(0, 300), 999);
@@ -122,16 +127,18 @@ const ctx = canvas.getContext("2d");
         if (graph.size() > graph.sizeCap) return true;
         if (node != enter && node != exit){
             //replace node with a dimer or a tri-loop
-            if (node.neighbors.size <= 3){//tri-loop
+            if (node.neighbors.size <= 2 || node.neighbors.size == 3 && Math.random() < 0.5){//tri-loop
                 const newCenter = node.pos.clone();
                 const radius = new Vector(-30, 0);
                 node.pos.copy(newCenter.add(radius));
 
                 radius.rotateDegreesSelf(120);
-                const node2 = graph.addNode(newCenter.add(radius), 0);
+                const node2 = graph.addNode(newCenter.add(radius), node.value);
                 
                 radius.rotateDegreesSelf(120);
-                const node3 = graph.addNode(newCenter.add(radius), 0);
+                const node3 = graph.addNode(newCenter.add(radius), node.value);
+
+/*                 const node4 = graph.addNode(newCenter, node.value); */
                 
 
                 const it = node.neighbors.values();
@@ -146,14 +153,24 @@ const ctx = canvas.getContext("2d");
                 graph.connectNodes(node3, node);
                 graph.connectNodes(node2, node3);
                 graph.connectNodes(node2, disconnects[0]);
+/*                 graph.connectNodes(node4, node);
+                graph.connectNodes(node4, node2);
+                graph.connectNodes(node4, node3); */
                 if (disconnects[1] != undefined) graph.connectNodes(node3, disconnects[1]);
+                node.value += 1;
+                node2.value += 1;
+                graph.nodeOrder.add(node2);
+                node3.value += 1;
+                graph.nodeOrder.add(node3);
+/*                 node4.value += 0;
+                graph.nodeOrder.add(node4); */
 
             } else {//dimer
                 const newCenter = node.pos.clone();
                 const radius = new Vector(-30, 0);
                 node.pos.copy(newCenter.add(radius));
                 radius.rotateDegreesSelf(180);
-                const node2 = graph.addNode(newCenter.add(radius), 0);
+                const node2 = graph.addNode(newCenter.add(radius), node.value);
 
                 const it = node.neighbors.values();
                 let disconnects = [];
@@ -170,9 +187,23 @@ const ctx = canvas.getContext("2d");
                 disconnects.forEach(disconnect => {
                     graph.connectNodes(disconnect, node2);
                 });
+                node.value += 4;
+                node2.value += 4;
+                graph.nodeOrder.add(node2);
             }
         }
         return false;
+    }
+    graph.nodeOrder = new GR_PriorityQueue();
+    graph.nodes.forEach(node => {graph.nodeOrder.add(node)});
+    graph.iterate = function(){
+        let successful = true;
+            for (let i = 0; i < this.size(); i++){
+                const node = graph.nodeOrder.remove();
+                successful = successful && graph.runRule(node);
+                graph.nodeOrder.add(node)
+            }
+            return successful;
     }
     graph.spaceNode = function(node){
         const acc = new Vector(0, 0);
@@ -201,14 +232,16 @@ const ctx = canvas.getContext("2d");
     }
 }
 function mainloop(){
+    graph.iterate();graph.spaceOut();
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     graph.nodes.forEach(node => {
-/*         ctx.beginPath();
-        ctx.ellipse(node.pos.x, node.pos.y, 10, 10, 0, 0, Math.PI*2);
+        
+        ctx.beginPath();
+        ctx.ellipse(node.pos.x, node.pos.y, node.value, node.value, 0, 0, Math.PI*2);
         ctx.closePath();
         ctx.fillStyle = 'red';
-        ctx.fill(); */
+        if (node.value != 999) ctx.fill(); 
         node.neighbors.forEach(nb => {
             ctx.beginPath();
             ctx.moveTo(node.pos.x, node.pos.y);
@@ -218,14 +251,15 @@ function mainloop(){
         });
     });
 }
-
+/* 
 for (let i = 0; i < 30; i++){
-    graph.iterate();
+    
     graph.spaceOut();
 }
 
-for (let i = 0; i < 500; i++)
+for (let i = 0; i < 500; i++){
     graph.spaceOut();
+} */
 
 setInterval(mainloop, 50);
 
