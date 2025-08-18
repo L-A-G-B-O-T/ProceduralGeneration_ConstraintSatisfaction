@@ -109,17 +109,18 @@ const ctx = canvas.getContext("2d");
 } */
 {//capillary bed generation 2.0
     var graph = new GR_Graph();
-    const enter = graph.addNode(new Vector(0, 300), "enter");
-    const middle = graph.addNode(new Vector(Math.random() * 100 + 425, Math.random() * 100 + 250));
-    const exit = graph.addNode(new Vector(950, 300), "exit");
+    const enter = graph.addNode(new Vector(0, 300), 999);
+    const middle = graph.addNode(new Vector(Math.random() * 100 + 425, Math.random() * 100 + 250), 0);
+    const exit = graph.addNode(new Vector(950, 300), 999);
     graph.connectNodes(enter, middle);
     graph.connectNodes(exit, middle);
     graph.sizeCap = 40; //not a hard cap; just signals when the graph is big enough
     graph.minBound = new Vector(0, 0);
     graph.maxBound = new Vector(canvas.width, canvas.height);
-    graph.runRule = function(node, index){
+
+    graph.runRule = function(node){
         if (graph.size() > graph.sizeCap) return true;
-        if (node.value != "enter" && node.value != "exit"){
+        if (node != enter && node != exit){
             //replace node with a dimer or a tri-loop
             if (node.neighbors.size <= 3){//tri-loop
                 const newCenter = node.pos.clone();
@@ -127,48 +128,47 @@ const ctx = canvas.getContext("2d");
                 node.pos.copy(newCenter.add(radius));
 
                 radius.rotateDegreesSelf(120);
-                const index2 = graph.addNode(newCenter.add(radius));
+                const node2 = graph.addNode(newCenter.add(radius), 0);
                 
                 radius.rotateDegreesSelf(120);
-                const index3 = graph.addNode(newCenter.add(radius));
+                const node3 = graph.addNode(newCenter.add(radius), 0);
                 
 
                 const it = node.neighbors.values();
                 let disconnects = [];
+
                 while (node.neighbors.size > 1){
-                    const ni = it.next().value;
-                    console.log(ni);
-                    graph.disconnectNodes(ni, index);
-                    disconnects.push(ni);
+                    const nb = it.next().value;
+                    graph.disconnectNodes(nb, node);
+                    disconnects.push(nb);
                 }
-                graph.connectNodes(index2, index);
-                graph.connectNodes(index3, index);
-                graph.connectNodes(index2, index3);
-                graph.connectNodes(index2, disconnects[0]);
-                if (disconnects[1] != undefined) graph.connectNodes(index3, disconnects[1]);
+                graph.connectNodes(node2, node);
+                graph.connectNodes(node3, node);
+                graph.connectNodes(node2, node3);
+                graph.connectNodes(node2, disconnects[0]);
+                if (disconnects[1] != undefined) graph.connectNodes(node3, disconnects[1]);
 
             } else {//dimer
                 const newCenter = node.pos.clone();
                 const radius = new Vector(-30, 0);
                 node.pos.copy(newCenter.add(radius));
                 radius.rotateDegreesSelf(180);
-                const index2 = graph.addNode(newCenter.add(radius));
+                const node2 = graph.addNode(newCenter.add(radius), 0);
 
                 const it = node.neighbors.values();
                 let disconnects = [];
                 let disconnectBool = true;
                 while (node.neighbors.size > 1){
-                    const ni = it.next().value;
-                    console.log(ni);
+                    const nb = it.next().value;
                     if (disconnectBool){
-                        graph.disconnectNodes(ni, index);
-                        disconnects.push(ni);
+                        graph.disconnectNodes(nb, node);
+                        disconnects.push(nb);
                     }
                     disconnectBool = !disconnectBool;
                 }
-                graph.connectNodes(index2, index);
+                graph.connectNodes(node2, node);
                 disconnects.forEach(disconnect => {
-                    graph.connectNodes(disconnect, index2);
+                    graph.connectNodes(disconnect, node2);
                 });
             }
         }
@@ -182,15 +182,15 @@ const ctx = canvas.getContext("2d");
             count++;
             const disp = nb.pos.sub(node.pos);
             acc.subSelf(disp.normalize().mulScalarSelf(Math.min(100, 50000/(disp.length()**2))));
-            if (node.neighbors.has(ni)){
+            if (node.neighbors.has(nb)){
                 acc.addSelf(nb.pos.sub(node.pos));
             }
         }
         acc.divScalarSelf(count);
         node.pos.addSelf(acc);
         node.pos.clampSelf(graph.minBound, graph.maxBound);
-        if (node.value == "enter") node.pos.set(0);
-        if (node.value == "exit") node.pos.set(950)
+        if (node == enter) node.pos.set(0);
+        if (node == exit) node.pos.set(950)
     }
     graph.spaceOut = function(){
         for (let i = 0; i < graph.sizeCap*5; i++){
@@ -209,8 +209,7 @@ function mainloop(){
         ctx.closePath();
         ctx.fillStyle = 'red';
         ctx.fill(); */
-        node.neighbors.forEach(ni => {
-            const nb = graph.getNode(ni);
+        node.neighbors.forEach(nb => {
             ctx.beginPath();
             ctx.moveTo(node.pos.x, node.pos.y);
             ctx.lineTo(nb.pos.x, nb.pos.y);
